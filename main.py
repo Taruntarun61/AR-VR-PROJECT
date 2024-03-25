@@ -1,87 +1,49 @@
 import os
-import vtk
 import pydicom
 import numpy as np
+import SimpleITK as sitk
 
+def load_dicom_series(directory):
+    """
+    Load a DICOM series from a directory.
+    """
+    reader = sitk.ImageSeriesReader()
+    dicom_files = reader.GetGDCMSeriesFileNames(directory)
+    reader.SetFileNames(dicom_files)
+    image = reader.Execute()
+    return image
 
-def dicom_to_vtk(dicom_dir):
-    reader = vtk.vtkDICOMImageReader()
-    reader.SetDirectoryName(dicom_dir)
-    reader.Update()
+def region_growing_segmentation(image):
+    """
+    Perform region growing segmentation on the input image.
+    """
+    # Define seed point (you may need to adjust this)
+    seed_point = (100, 100, 10)  # Example seed point (x, y, z)
 
-    # Get image data
-    image_data = reader.GetOutput()
-    print("DICOM Imagedata:", image_data)
+    # Apply region growing segmentation
+    segmented_image = sitk.ConnectedThreshold(image, seedList=[seed_point], lower=0, upper=2000)
 
-    # Compute spacing
-    spacing = image_data.GetSpacing()
-    print("DICOM spacing:", spacing)
+    return segmented_image
 
-    # Compute dimensions
-    dims = image_data.GetDimensions()
-    print("DICOM dimensions:", dims)  # Print dimensions for debugging
-
-    # Check if dimensions are not 3D
-    if len(dims) != 3:
-        raise ValueError("DICOM data is not in 3D")
-
-    # Create a VTK image
-    image_vtk = vtk.vtkImageData()
-    image_vtk.SetDimensions(dims)
-    image_vtk.SetSpacing(spacing)
-    image_vtk.AllocateScalars(vtk.VTK_DOUBLE, 1)
-
-    # Copy data from DICOM reader to VTK image
-    image_vtk.DeepCopy(image_data)
-
-    # Reslice image data
-    reslice = vtk.vtkImageReslice()
-    reslice.SetInputData(image_vtk)
-    reslice.SetOutputDimensionality(3)
-    reslice.SetResliceAxesDirectionCosines(1, 0, 0, 0, 1, 0, 0, 0, 1)
-    reslice.SetInterpolationModeToLinear()
-    reslice.Update()
-
-    return reslice.GetOutput()
-
-
-def create_mesh(image_data):
-    contour = vtk.vtkMarchingCubes()
-    contour.SetInputData(image_data)
-    contour.SetValue(4, 4)
-    contour.Update()
-
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputData(contour.GetOutput())
-
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
-    return actor
-
+def save_segmentation(segmentation, output_directory):
+    """
+    Save the segmented image.
+    """
+    sitk.WriteImage(segmentation, os.path.join(output_directory, "segmented_image.dcm"))
 
 if __name__ == "__main__":
-    # Path to DICOM directory
-    dicom_dir = r'C:\Users\tarun\PycharmProjects\pyth\OneDrive_1_3-17-2024'
+    # Directory containing DICOM files
+    dicom_directory =r'C:\Users\tarun\PycharmProjects\pyth\project.vvcx\case2\case2'
 
-    # Convert DICOM to VTK image data
-    image_data = dicom_to_vtk(dicom_dir)
+    # Load DICOM series
+    dicom_image = load_dicom_series(dicom_directory)
 
-    # Create 3D mesh
-    mesh_actor = create_mesh(image_data)
+    # Segment the image using region growing
+    segmented_image = region_growing_segmentation(dicom_image)
 
-    # Create renderer
-    renderer = vtk.vtkRenderer()
-    renderer.AddActor(mesh_actor)
+    # Save the segmented image
+    output_directory = "output"
+    os.makedirs(output_directory, exist_ok=True)
+    save_segmentation(segmented_image, output_directory)
 
-    # Create render window
-    render_window = vtk.vtkRenderWindow()
-    render_window.AddRenderer(renderer)
 
-    # Create render window interactor
-    render_window_interactor = vtk.vtkRenderWindowInteractor()
-    render_window_interactor.SetRenderWindow(render_window)
-
-    # Start the interaction
-    render_window.Render()
-    render_window_interactor.Start()
