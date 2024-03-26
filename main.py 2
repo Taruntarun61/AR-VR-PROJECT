@@ -1,0 +1,71 @@
+import pygame
+from pygame.locals import *
+
+# Initialize Pygame
+pygame.init()
+
+# Set screen dimensions
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Bird's Eye View 3D Modeling")
+
+# Define colors
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+
+# Define vertices of a cube
+vertices = [
+    [100, 100, -100],
+    [100, -100, -100],
+    [-100, -100, -100],
+    [-100, 100, -100],
+    [100, 100, 100],
+    [100, -100, 100],
+    [-100, -100, 100],
+    [-100, 100, 100]
+]
+
+# Define edges of the cube
+edges = [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7]
+]
+
+# Main loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            running = False
+
+    # Clear the screen
+    screen.fill(WHITE)
+
+    # Project vertices onto 2D space
+    projected_vertices = []
+    for vertex in vertices:
+        x = vertex[0] * 2 / (vertex[2] + 3) + WIDTH / 2
+        y = vertex[1] * 2 / (vertex[2] + 3) + HEIGHT / 2
+        projected_vertices.append((x, y))
+
+    # Draw edges
+    for edge in edges:
+        pygame.draw.line(screen, BLUE, projected_vertices[edge[0]], projected_vertices[edge[1]], 2)
+
+    # Update display
+    pygame.display.flip()
+
+# Quit Pygame
+pygame.quit()
